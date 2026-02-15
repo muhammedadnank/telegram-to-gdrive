@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: music-to-gdrive-bot
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python3 -m bot
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: APP_ID
+        sync: false
+      - key: API_HASH
+        sync: false
+      - key: MONGO_URI
+        sync: false
+      - key: SUDO_USERS
+        sync: false
+      - key: G_DRIVE_CLIENT_ID
+        sync: false
+      - key: G_DRIVE_CLIENT_SECRET
+        sync: false
+      - key: DOWNLOAD_DIRECTORY
+        value: ./downloads/
+      - key: PORT
+        value: 8080

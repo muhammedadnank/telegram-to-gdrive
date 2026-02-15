@@ -1,0 +1,13 @@
+pyrofork
+tgcrypto
+oauth2client
+pymongo
+dnspython
+httplib2
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+tenacity
+python-dotenv
+flask
+gunicorn

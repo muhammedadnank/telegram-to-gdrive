@@ -1,0 +1,33 @@
+# Environment
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Bot session files
+*.session
+*.session-journal
+
+# Downloads
+downloads/
+
+# Logs
+log.txt
+*.log
+
+# IDE
+.idx/
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
