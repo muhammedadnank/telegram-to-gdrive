@@ -22,4 +22,6 @@ services:
       - key: DOWNLOAD_DIRECTORY
         value: ./downloads/
       - key: PORT
-        value: 8080
+        value: "8080"
+      - key: RENDER_EXTERNAL_URL
+        sync: false

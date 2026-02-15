@@ -1,4 +1,5 @@
 import os
+import signal
 import logging
 from pyrogram import Client
 from pyrogram import enums
@@ -13,10 +14,22 @@ LOGGER = logging.getLogger(__name__)
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
 
 
+def handle_sigterm(signum, frame):
+    LOGGER.info("SIGTERM received — bot will stop gracefully after current upload completes.")
+
+
 if __name__ == "__main__":
-    # Create downloads directory if not exists
-    if not os.path.isdir(DOWNLOAD_DIRECTORY):
-        os.makedirs(DOWNLOAD_DIRECTORY)
+    # Handle Render's SIGTERM gracefully
+    signal.signal(signal.SIGTERM, handle_sigterm)
+
+    # Use absolute path for downloads to avoid path confusion
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    download_dir = os.path.join(base_dir, "downloads")
+
+    if not os.path.isdir(download_dir):
+        os.makedirs(download_dir)
+
+    LOGGER.info(f"Download directory: {download_dir}")
 
     # Start Flask keep-alive server
     start_server()
@@ -30,7 +43,7 @@ if __name__ == "__main__":
         api_hash=API_HASH,
         plugins=plugins,
         parse_mode=enums.ParseMode.MARKDOWN,
-        workdir=".",  # Save session file in root, not downloads folder
+        workdir=base_dir,
     )
 
     LOGGER.info("Starting Bot!")
