@@ -1,4 +1,5 @@
 import os
+import asyncio
 from pyrogram import Client, filters
 from bot.helpers.utils import CustomFilters, humanbytes
 from bot.helpers.gdrive_utils import GoogleDrive
@@ -41,7 +42,8 @@ async def _telegram_file(client, message):
                 os.path.basename(file_path), humanbytes(os.path.getsize(file_path))
             )
         )
-        msg = GoogleDrive(user_id).upload_file(file_path, file.mime_type)
+        # Run blocking upload in a separate thread to avoid freezing the bot
+        msg = await asyncio.to_thread(GoogleDrive(user_id).upload_file, file_path, file.mime_type)
         await sent_message.edit(msg)
     except RPCError:
         await sent_message.edit(Messages.WENT_WRONG)

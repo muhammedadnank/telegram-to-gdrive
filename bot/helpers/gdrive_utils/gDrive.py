@@ -197,7 +197,7 @@ class GoogleDrive:
         mime_type = mimeType if mimeType else guess_type(file_path)[0]
         mime_type = mime_type if mime_type else "text/plain"
         media_body = MediaFileUpload(
-            file_path, mimetype=mime_type, chunksize=150 * 1024 * 1024, resumable=True
+            file_path, mimetype=mime_type, chunksize=50 * 1024 * 1024, resumable=True
         )
         filename = os.path.basename(file_path)
         filesize = humanbytes(os.path.getsize(file_path))
