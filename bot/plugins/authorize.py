@@ -78,7 +78,7 @@ async def _token(client, message):
     code = message.text
     token = code.split()[-1]
     WORD = len(token)
-    if WORD == 73 and token[1] == "/":
+    if token.startswith("4/"):
         user_id = message.from_user.id
         if user_id in flows:
             try:
