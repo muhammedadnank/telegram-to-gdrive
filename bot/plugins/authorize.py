@@ -1,21 +1,20 @@
-import re
 import os
-import json
 from httplib2 import Http
 from bot import LOGGER, G_DRIVE_CLIENT_ID, G_DRIVE_CLIENT_SECRET
 from bot.config import Messages
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from oauth2client.client import OAuth2WebServerFlow, FlowExchangeError, HttpAccessTokenRefreshError
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
 from bot.helpers.db import gDriveDB
 from bot.config import BotCommands
 from bot.helpers.utils import CustomFilters
 
 
 OAUTH_SCOPE = "https://www.googleapis.com/auth/drive"
-REDIRECT_URI = os.environ.get("REDIRECT_URI", "urn:ietf:wg:oauth:2.0:oob")
+REDIRECT_URI = os.environ.get(
+    "REDIRECT_URI",
+    "https://telegram-to-gdrive-w0v9.onrender.com/oauth2callback"
+)
 
 flows = {}
 
@@ -32,7 +31,6 @@ async def _auth(client, message):
             gDriveDB._set(user_id, creds)
             await message.reply_text(Messages.ALREADY_AUTH, quote=True)
         except HttpAccessTokenRefreshError:
-            # Token expired or revoked — clear and prompt re-auth
             LOGGER.warning(f"Token refresh failed for {user_id} — clearing creds")
             gDriveDB._clear(user_id)
             await message.reply_text(
@@ -40,52 +38,34 @@ async def _auth(client, message):
                 "__Your old session has been cleared. Please re-authorize below.__",
                 quote=True,
             )
-            # Fall through to generate a new auth URL
-            try:
-                flow = OAuth2WebServerFlow(
-                    G_DRIVE_CLIENT_ID,
-                    G_DRIVE_CLIENT_SECRET,
-                    OAUTH_SCOPE,
-                    redirect_uri=REDIRECT_URI,
-                    response_type="code",
-                    access_type="offline",
-                    prompt="consent",
-                )
-                auth_url = flow.step1_get_authorize_url()
-                flows[user_id] = flow
-                LOGGER.info(f"AuthURL:{user_id}")
-                await message.reply_text(
-                    text=Messages.AUTH_TEXT.format(auth_url),
-                    quote=True,
-                    reply_markup=InlineKeyboardMarkup(
-                        [[InlineKeyboardButton("Authorization URL", url=auth_url)]]
-                    ),
-                )
-            except Exception as e:
-                await message.reply_text(f"**ERROR:** `{e}`", quote=True)
+            await _send_auth_url(message, user_id)
     else:
-        try:
-            flow = OAuth2WebServerFlow(
-                G_DRIVE_CLIENT_ID,
-                G_DRIVE_CLIENT_SECRET,
-                OAUTH_SCOPE,
-                redirect_uri=REDIRECT_URI,
-                response_type="code",
-                access_type="offline",
-                prompt="consent",
-            )
-            auth_url = flow.step1_get_authorize_url()
-            flows[user_id] = flow
-            LOGGER.info(f"AuthURL:{user_id}")
-            await message.reply_text(
-                text=Messages.AUTH_TEXT.format(auth_url),
-                quote=True,
-                reply_markup=InlineKeyboardMarkup(
-                    [[InlineKeyboardButton("Authorization URL", url=auth_url)]]
-                ),
-            )
-        except Exception as e:
-            await message.reply_text(f"**ERROR:** `{e}`", quote=True)
+        await _send_auth_url(message, user_id)
+
+
+async def _send_auth_url(message, user_id):
+    try:
+        flow = OAuth2WebServerFlow(
+            G_DRIVE_CLIENT_ID,
+            G_DRIVE_CLIENT_SECRET,
+            OAUTH_SCOPE,
+            redirect_uri=REDIRECT_URI,
+            response_type="code",
+            access_type="offline",
+            prompt="consent",
+        )
+        auth_url = flow.step1_get_authorize_url()
+        flows[user_id] = flow
+        LOGGER.info(f"AuthURL:{user_id}")
+        await message.reply_text(
+            text=Messages.AUTH_TEXT.format(auth_url),
+            quote=True,
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("Authorization URL", url=auth_url)]]
+            ),
+        )
+    except Exception as e:
+        await message.reply_text(f"**ERROR:** `{e}`", quote=True)
 
 
 @Client.on_message(
@@ -110,7 +90,6 @@ async def _revoke(client, message):
 async def _token(client, message):
     code = message.text
     token = code.split()[-1]
-    WORD = len(token)
     if token.startswith("4/"):
         user_id = message.from_user.id
         if user_id in flows:
@@ -118,7 +97,7 @@ async def _token(client, message):
                 sent_message = await message.reply_text(
                     "🕵️**Checking received code...**", quote=True
                 )
-                creds = flows[user_id].step2_exchange(code)
+                creds = flows[user_id].step2_exchange(token)
                 gDriveDB._set(user_id, creds)
                 LOGGER.info(f"AuthSuccess: {user_id}")
                 await sent_message.edit(Messages.AUTH_SUCCESSFULLY)
