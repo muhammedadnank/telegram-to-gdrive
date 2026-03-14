@@ -6,7 +6,7 @@ from bot import LOGGER, G_DRIVE_CLIENT_ID, G_DRIVE_CLIENT_SECRET
 from bot.config import Messages
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from oauth2client.client import OAuth2WebServerFlow, FlowExchangeError
+from oauth2client.client import OAuth2WebServerFlow, FlowExchangeError, HttpAccessTokenRefreshError
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from bot.helpers.db import gDriveDB
@@ -27,9 +27,42 @@ async def _auth(client, message):
     user_id = message.from_user.id
     creds = gDriveDB.search(user_id)
     if creds is not None:
-        creds.refresh(Http())
-        gDriveDB._set(user_id, creds)
-        await message.reply_text(Messages.ALREADY_AUTH, quote=True)
+        try:
+            creds.refresh(Http())
+            gDriveDB._set(user_id, creds)
+            await message.reply_text(Messages.ALREADY_AUTH, quote=True)
+        except HttpAccessTokenRefreshError:
+            # Token expired or revoked — clear and prompt re-auth
+            LOGGER.warning(f"Token refresh failed for {user_id} — clearing creds")
+            gDriveDB._clear(user_id)
+            await message.reply_text(
+                "⚠️ **Your Google authorization has expired or been revoked.**\n"
+                "__Your old session has been cleared. Please re-authorize below.__",
+                quote=True,
+            )
+            # Fall through to generate a new auth URL
+            try:
+                flow = OAuth2WebServerFlow(
+                    G_DRIVE_CLIENT_ID,
+                    G_DRIVE_CLIENT_SECRET,
+                    OAUTH_SCOPE,
+                    redirect_uri=REDIRECT_URI,
+                    response_type="code",
+                    access_type="offline",
+                    prompt="consent",
+                )
+                auth_url = flow.step1_get_authorize_url()
+                flows[user_id] = flow
+                LOGGER.info(f"AuthURL:{user_id}")
+                await message.reply_text(
+                    text=Messages.AUTH_TEXT.format(auth_url),
+                    quote=True,
+                    reply_markup=InlineKeyboardMarkup(
+                        [[InlineKeyboardButton("Authorization URL", url=auth_url)]]
+                    ),
+                )
+            except Exception as e:
+                await message.reply_text(f"**ERROR:** `{e}`", quote=True)
     else:
         try:
             flow = OAuth2WebServerFlow(
