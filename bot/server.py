@@ -8,9 +8,6 @@ LOGGER = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# Shared dict to pass auth code from web callback to bot
-oauth_callbacks = {}
-
 
 @app.route('/')
 def home():
@@ -37,8 +34,6 @@ def oauth2callback():
         """, error=error), 400
 
     if code:
-        # Store code temporarily — bot will pick it up by state/user_id
-        # We display the code for the user to send to the bot
         return render_template_string("""
         <html><body style="font-family:sans-serif;text-align:center;padding:50px">
         <h2>✅ Authorization Successful!</h2>
@@ -54,33 +49,12 @@ def oauth2callback():
     return "No code received.", 400
 
 
-def keep_alive_ping():
-    """Ping own server every 10 minutes to prevent Render free tier sleep."""
-    import time
-    render_url = os.environ.get("RENDER_EXTERNAL_URL")
-    if not render_url:
-        LOGGER.info("RENDER_EXTERNAL_URL not set, keep-alive ping disabled.")
-        return
-    while True:
-        time.sleep(600)  # 10 minutes
-        try:
-            urllib.request.urlopen(f"{render_url}/health", timeout=10)
-            LOGGER.info("Keep-alive ping sent.")
-        except Exception as e:
-            LOGGER.warning(f"Keep-alive ping failed: {e}")
-
-
 def run():
-    port = int(os.environ.get("PORT", 10000))
+    port = int(os.environ.get("PORT", 8080))  # Fixed: consistent default 8080
     LOGGER.info(f"Starting Flask server on port {port}")
     app.run(host='0.0.0.0', port=port)
 
 
 def start_server():
-    # Start Flask server
     flask_thread = Thread(target=run, daemon=True)
     flask_thread.start()
-
-    # Start keep-alive pinger
-    ping_thread = Thread(target=keep_alive_ping, daemon=True)
-    ping_thread.start()
