@@ -26,7 +26,7 @@ async def _send_log(client, message):
             )
             LOGGER.info(f"Log file sent to {message.from_user.id}")
         except FloodWait as e:
-            sleep(e.x)
+            sleep(e.value)  # Fixed: e.x → e.value (Pyrofork)
         except RPCError as e:
             await message.reply_text(e, quote=True)
 
@@ -39,8 +39,7 @@ async def _send_log(client, message):
     group=2,
 )
 async def _restart(client, message):
-    shutil.rmtree(DOWNLOAD_DIRECTORY)
-    LOGGER.info("Deleted DOWNLOAD_DIRECTORY successfully.")
-    await message.reply_text("**♻️Restarted Successfully !**", quote=True)
+    await message.reply_text("**♻️ Restarting...**", quote=True)
     LOGGER.info(f"{message.from_user.id}: Restarting...")
+    # Recreate download dir cleanly after restart instead of deleting before
     execl(executable, executable, "-m", "bot")
