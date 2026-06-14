@@ -11,10 +11,7 @@ from bot.helpers.utils import CustomFilters
 
 
 OAUTH_SCOPE = "https://www.googleapis.com/auth/drive"
-REDIRECT_URI = os.environ.get(
-    "REDIRECT_URI",
-    "https://telegram-to-gdrive-w0v9.onrender.com/oauth2callback"
-)
+REDIRECT_URI = os.environ.get("REDIRECT_URI", "")
 
 flows = {}
 
@@ -45,15 +42,18 @@ async def _auth(client, message):
 
 async def _send_auth_url(message, user_id):
     try:
-        flow = OAuth2WebServerFlow(
-            G_DRIVE_CLIENT_ID,
-            G_DRIVE_CLIENT_SECRET,
-            OAUTH_SCOPE,
-            redirect_uri=REDIRECT_URI,
+        flow_kwargs = dict(
+            client_id=G_DRIVE_CLIENT_ID,
+            client_secret=G_DRIVE_CLIENT_SECRET,
+            scope=OAUTH_SCOPE,
             response_type="code",
             access_type="offline",
             prompt="consent",
         )
+        if REDIRECT_URI:
+            flow_kwargs["redirect_uri"] = REDIRECT_URI
+
+        flow = OAuth2WebServerFlow(**flow_kwargs)
         auth_url = flow.step1_get_authorize_url()
         flows[user_id] = flow
         LOGGER.info(f"AuthURL:{user_id}")
@@ -108,3 +108,9 @@ async def _token(client, message):
                 await sent_message.edit(f"**ERROR:** `{e}`")
         else:
             await message.reply_text(Messages.FLOW_IS_NONE, quote=True)
+    else:
+        # Not an auth code — guide unauthorized users to /start
+        await message.reply_text(
+            f"👋 **Please authenticate first.**\n__Use /auth to connect your Google Drive.__",
+            quote=True,
+        )
