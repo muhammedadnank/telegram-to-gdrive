@@ -30,6 +30,11 @@ try:
     G_DRIVE_CLIENT_ID = os.environ["G_DRIVE_CLIENT_ID"]
     G_DRIVE_CLIENT_SECRET = os.environ["G_DRIVE_CLIENT_SECRET"]
     REDIRECT_URI = os.environ.get("REDIRECT_URI", "")
+    if REDIRECT_URI and REDIRECT_URI != "urn:ietf:wg:oauth:2.0:oob" and not REDIRECT_URI.endswith("/oauth2callback"):
+        if REDIRECT_URI.endswith("/"):
+            REDIRECT_URI += "oauth2callback"
+        else:
+            REDIRECT_URI += "/oauth2callback"
     WEB_PASSWORD = os.environ.get("WEB_PASSWORD", "")
 
 except KeyError as e:

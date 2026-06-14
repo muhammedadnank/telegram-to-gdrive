@@ -1,6 +1,5 @@
-import os
 from httplib2 import Http
-from bot import LOGGER, G_DRIVE_CLIENT_ID, G_DRIVE_CLIENT_SECRET
+from bot import LOGGER, G_DRIVE_CLIENT_ID, G_DRIVE_CLIENT_SECRET, REDIRECT_URI
 from bot.config import Messages, BotCommands
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -10,7 +9,6 @@ from bot.helpers.utils import CustomFilters
 
 
 OAUTH_SCOPE = "https://www.googleapis.com/auth/drive"
-REDIRECT_URI = os.environ.get("REDIRECT_URI", "")
 
 # Pending auth flows keyed by user_id
 flows = {}
