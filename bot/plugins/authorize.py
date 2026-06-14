@@ -85,7 +85,11 @@ async def _revoke(client, message):
 
 
 @Client.on_message(
-    filters.private & filters.incoming & filters.text & ~CustomFilters.auth_users
+    filters.private
+    & filters.incoming
+    & filters.text
+    & ~filters.regex(r"^/")
+    & ~CustomFilters.auth_users
 )
 async def _token(client, message):
     code = message.text

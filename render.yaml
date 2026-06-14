@@ -23,5 +23,7 @@ services:
         value: ./downloads/
       - key: PORT
         value: "8080"
+      - key: REDIRECT_URI
+        sync: false
       - key: RENDER_EXTERNAL_URL
         sync: false

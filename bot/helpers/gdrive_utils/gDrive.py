@@ -30,8 +30,12 @@ class GoogleDrive:
         self.__G_DRIVE_DIR_BASE_DOWNLOAD_URL = (
             "https://drive.google.com/drive/folders/{}"
         )
-        self.__service = self.authorize(gDriveDB.search(user_id))
-        self.__parent_id = idsDB.search_parent(user_id)
+        creds = gDriveDB.search(user_id)
+        if creds is None:
+            raise ValueError("User not authorized. Credentials missing.")
+        self.__service = self.authorize(creds)
+        parent = idsDB.search_parent(user_id)
+        self.__parent_id = None if parent == "root" else parent
 
     def getIdFromUrl(self, link: str):
         if "folders" in link or "file" in link:
@@ -81,7 +85,9 @@ class GoogleDrive:
         before=before_log(LOGGER, logging.DEBUG),
     )
     def copyFile(self, file_id, dest_id):
-        body = {"parents": [dest_id]}
+        body = {}
+        if dest_id is not None:
+            body["parents"] = [dest_id]
         try:
             res = (
                 self.__service.files()
@@ -136,7 +142,7 @@ class GoogleDrive:
         }
         if parent_id is not None:
             file_metadata["parents"] = [parent_id]
-        else:
+        elif self.__parent_id is not None:
             file_metadata["parents"] = [self.__parent_id]
         file = (
             self.__service.files()
@@ -206,7 +212,8 @@ class GoogleDrive:
             "description": "Uploaded using @UploadGdriveBot",
             "mimeType": mime_type,
         }
-        body["parents"] = [self.__parent_id]
+        if self.__parent_id is not None:
+            body["parents"] = [self.__parent_id]
         LOGGER.info(f"Upload: {file_path}")
         try:
             uploaded_file = (

@@ -26,8 +26,13 @@ if __name__ == "__main__":
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     download_dir = os.path.join(base_dir, "downloads")
 
-    if not os.path.isdir(download_dir):
-        os.makedirs(download_dir)
+    import shutil
+    if os.path.isdir(download_dir):
+        try:
+            shutil.rmtree(download_dir)
+        except Exception as e:
+            LOGGER.warning(f"Failed to clear download directory: {e}")
+    os.makedirs(download_dir)
 
     LOGGER.info(f"Download directory: {download_dir}")
 

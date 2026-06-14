@@ -100,7 +100,7 @@ mongodb+srv://username:password@cluster.xxxxx.mongodb.net/?retryWrites=true&w=ma
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/telegram-to-gdrive
+git clone https://github.com/muhammedadnank/telegram-to-gdrive
 cd telegram-to-gdrive
 
 # Install dependencies

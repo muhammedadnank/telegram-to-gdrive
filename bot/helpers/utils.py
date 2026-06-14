@@ -10,8 +10,10 @@ class CustomFilters:
 
 
 def humanbytes(size: int) -> str:
-    if not size:
+    if size is None:
         return ""
+    if size == 0:
+        return "0 B"
     power = 2**10
     number = 0
     dict_power_n = {0: " ", 1: "K", 2: "M", 3: "G", 4: "T", 5: "P"}
