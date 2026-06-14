@@ -9,21 +9,23 @@ This bot supports dual-sync operations simultaneously:
 **1️⃣ Google Drive ➔ Telegram Sync (Automatic)**
 Syncs audio files from mapped Google Drive folders to Telegram channels.
 *Admin Commands:*
-• `/addfolder <folder_url> <channel_id>` — Map a Drive folder to a channel
-• `/removefolder <folder_id>` — Remove a folder mapping
-• `/status` — Bot status and active mappings
-• `/stats` — Upload statistics
-• `/last` — Last uploaded file details
-• `/sync` — Trigger immediate Drive check
-• `/retry` — Retry failed uploads
-• `/logs` — Get bot logs
+• /addfolder <folder_url> <channel_id> — Map a Drive folder to a channel
+• /removefolder <folder_id> — Remove a folder mapping
+• /status — Bot status and active mappings
+• /stats — Upload statistics
+• /last — Last uploaded file details
+• /sync — Trigger immediate Drive check
+• /retry — Retry failed uploads
+• /logs — Get bot logs
 
 **2️⃣ Telegram ➔ Google Drive Upload**
 Send any audio/music file directly to this bot, and it will upload it to your Google Drive.
 *User Commands:*
-• `/auth` — Authenticate your Google Drive account
-• `/revoke` — Revoke your authenticated Google Drive account
-• `/setfolder <folder_url>` — Set custom upload folder (or `/setfolder clear`)
+• /auth — Add/authorize a Google Drive account (supports multiple accounts)
+• /accounts — List all linked Google Drive accounts
+• /switch <number> — Switch the active account
+• /revoke [number] — Remove an account (defaults to active account)
+• /setfolder <folder_url> — Set custom upload folder (or `/setfolder clear`)
 
 **Supported audio formats:** MP3, M4A, FLAC, WAV, AAC, OGG, OPUS"""
 

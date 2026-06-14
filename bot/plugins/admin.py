@@ -38,7 +38,7 @@ async def cmd_addfolder(client: Client, message: Message):
     if not channel_id.lstrip("-").isdigit():
         return await message.reply_text("❗ Channel ID must be a number (e.g. `-100123456789`).", quote=True)
 
-    ok = mappings_db.add(folder_id, channel_id)
+    ok = mappings_db.add(folder_id, channel_id, added_by=message.from_user.id)
     if ok:
         LOGGER.info(f"Admin {message.from_user.id} added folder {folder_id} → {channel_id}")
         await message.reply_text(

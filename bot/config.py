@@ -2,6 +2,8 @@ class BotCommands:
     Authorize = ["auth", "authorize"]
     SetFolder = ["setfolder", "setfl"]
     Revoke = ["revoke"]
+    Accounts = ["accounts", "myaccounts"]
+    SwitchAccount = ["switch", "switchaccount"]
 
 
 class Messages:
@@ -36,25 +38,40 @@ class Messages:
 
     DOWNLOADING = "📥 **Downloading File...\nLink:** `{}`"
 
-    ALREADY_AUTH = "🔒 **Already authorized your Google Drive Account.**\n__Use /revoke to revoke the current account.__\n__Send me a direct link or File to Upload on Google Drive__"
+    ALREADY_AUTH = (
+        "🔒 **You already have {count} Google Drive account(s) linked.**\n"
+        "__Use /accounts to manage them, or /auth again to add another account.__"
+    )
 
     FLOW_IS_NONE = f"❗ **Invalid Code**\n__Run {BotCommands.Authorize[0]} first.__"
 
-    AUTH_SUCCESSFULLY = "🔐 **Authorized Google Drive account Successfully.**"
+    AUTH_SUCCESSFULLY = "🔐 **Google Drive account #{index} authorized successfully.**\n__Label: `{label}`__\n__Use /accounts to view all linked accounts.__"
 
     INVALID_AUTH_CODE = "❗ **Invalid Code**\n__The code you have sent is invalid or already used before. Generate new one by the Authorization URL__"
 
     AUTH_TEXT = "⛓️ **To Authorize your Google Drive account visit this [URL]({}) and copy the code & send it here.**\n__Visit the URL > Allow permissions >  copy code  > Send it here__"
 
+    NO_ACCOUNTS = (
+        f"❗ **No Google Drive accounts linked.**\n"
+        f"__Use /{BotCommands.Authorize[0]} to connect one.__"
+    )
+
+    ACCOUNTS_LIST_HEADER = "🗂️ **Your linked Google Drive accounts:**\n\n{entries}\n\n__Use /switch `<number>` to switch active account.__\n__Use /revoke `<number>` to remove an account.__"
+
+    SWITCHED = "✅ **Switched to account #{index}:** `{label}`"
+
+    REVOKED = (
+        f"🔓 **Account removed successfully.**\n"
+        f"__Use /{BotCommands.Authorize[0]} to add a new account.__"
+    )
+
     DOWNLOAD_TG_FILE = "📥 **Downloading File...**\n**Filename:** `{}`\n**Size:** `{}`\n**MimeType:** `{}`"
 
     PARENT_SET_SUCCESS = "🆔✅ **Custom Folder link set successfully.**\n__Your custom folder id - {}\nUse__ `/{} clear` __to clear it.__"
-
+    
     PARENT_CLEAR_SUCCESS = f"🆔🚮 **Custom Folder ID Cleared Successfuly.**\n__Use__ `/{BotCommands.SetFolder[0]} (Folder Link)` __to set it back__."
 
     CURRENT_PARENT = "🆔 **Your Current Custom Folder ID - {}**\n__Use__ `/{} (Folder link)` __to change it.__"
-
-    REVOKED = f"🔓 **Revoked current logged account successfully.**\n__Use /{BotCommands.Authorize[0]} to authenticate again and use this bot.__"
 
     NOT_FOLDER_LINK = (
         "❗ **Invalid folder link.**\n__The link you send its not belong to a folder.__"

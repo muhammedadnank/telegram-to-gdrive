@@ -1,7 +1,7 @@
 # 🎵 Google Drive ⇆ Telegram Music Bot
 
 A premium, reliable, and highly automated dual-sync Telegram bot that supports:
-1. **Google Drive ➔ Telegram Sync**: Automatically syncs audio files from mapped Google Drive folders to Telegram channels (using a Service Account).
+1. **Google Drive ➔ Telegram Sync**: Automatically syncs audio files from mapped Google Drive folders to Telegram channels (using the administrator's OAuth2 account).
 2. **Telegram ➔ Google Drive Upload**: Authenticated users can send audio files directly to the bot to upload to their personal Google Drives (using OAuth2).
 
 Powered by Python, Pyrofork (Pyrogram), and MongoDB.
@@ -33,7 +33,7 @@ Powered by Python, Pyrofork (Pyrogram), and MongoDB.
 
 ```
 1️⃣ Google Drive ➔ Telegram Sync
-   Google Drive (Service Account) ➔ changes.list Poll ➔ Worker Queue (Concurrently) ➔ Telegram Channel
+   Google Drive (OAuth2 Account) ➔ changes.list Poll ➔ Worker Queue (Concurrently) ➔ Telegram Channel
 
 2️⃣ Telegram ➔ Google Drive Upload
    Telegram User ➔ Sent Audio File ➔ OAuth2 Validation (gDriveDB) ➔ Uploaded to Custom Parent Folder
@@ -63,9 +63,8 @@ Click **Fork** on GitHub to create your own copy of the repository.
 | `API_HASH` | Get from [my.telegram.org](https://my.telegram.org) | **Required** |
 | `MONGO_URI` | MongoDB Atlas Connection String | **Required** |
 | `SUDO_USERS` | Space-separated Telegram User IDs of Admins | **Required** |
-| `G_DRIVE_SERVICE_ACCOUNT_JSON` | Full Google Service Account key JSON string | **Required** |
-| `G_DRIVE_CLIENT_ID` | Google Client ID for OAuth user uploads | *Optional* |
-| `G_DRIVE_CLIENT_SECRET` | Google Client Secret for OAuth user uploads | *Optional* |
+| `G_DRIVE_CLIENT_ID` | Google Client ID for OAuth access | **Required** |
+| `G_DRIVE_CLIENT_SECRET` | Google Client Secret for OAuth access | **Required** |
 | `REDIRECT_URI` | Web callback URL for OAuth (e.g. `https://app.onrender.com/oauth2callback`) | *Optional* |
 | `MAX_WORKERS` | Max concurrent worker tasks (default: `3`) | *Optional* |
 | `POLL_INTERVAL` | Interval in seconds between checks (default: `45`) | *Optional* |
@@ -78,21 +77,17 @@ Click **Fork** on GitHub to create your own copy of the repository.
 
 ## 🔑 Setup Guides
 
-### 1. Google Drive Service Account (Drive ➔ Telegram)
+### 1. Google OAuth 2.0 Credentials (Needed for All Features)
 1. Open the [Google Cloud Console](https://console.cloud.google.com/).
 2. Create a project and enable the **Google Drive API**.
-3. Create a **Service Account** under **APIs & Services** ➔ **Credentials**.
-4. Create a **JSON Key** for the Service Account, copy the entire JSON content, and paste it into the `G_DRIVE_SERVICE_ACCOUNT_JSON` environment variable.
-5. Share the target Drive folders with the Service Account email address as a **Viewer/Editor**.
+3. Configure the **OAuth consent screen** (External, add test users including admin emails).
+4. Go to **Credentials** ➔ **Create Credentials** ➔ **OAuth client ID**.
+5. Select application type **Web application**.
+6. Add your redirect URI to **Authorized redirect URIs** (e.g., `https://your-bot-url.onrender.com/oauth2callback`).
+7. Copy the client ID and client secret, then set `G_DRIVE_CLIENT_ID`, `G_DRIVE_CLIENT_SECRET`, and `REDIRECT_URI` in the environment.
+8. Admin/Sudo users must run `/auth` in the bot to link their Google Drive accounts before adding any folder mappings.
 
-### 2. Google OAuth 2.0 Credentials (Telegram ➔ Drive)
-1. In the Google Cloud Console under the same project, configure the **OAuth consent screen** (External, add test users).
-2. Go to **Credentials** ➔ **Create Credentials** ➔ **OAuth client ID**.
-3. Select application type **Web application**.
-4. Add your redirect URI to **Authorized redirect URIs** (e.g., `https://your-bot-url.onrender.com/oauth2callback`).
-5. Copy the client ID and client secret, then set `G_DRIVE_CLIENT_ID`, `G_DRIVE_CLIENT_SECRET`, and `REDIRECT_URI` in the environment.
-
-### 3. MongoDB Setup
+### 2. MongoDB Setup
 1. Create a free cluster on [mongodb.com](https://www.mongodb.com).
 2. Add a database user with read/write access.
 3. Allow connections from anywhere (`0.0.0.0/0`).

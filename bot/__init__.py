@@ -18,7 +18,6 @@ try:
     APP_ID = int(os.environ["APP_ID"])
     API_HASH = os.environ["API_HASH"]
     MONGO_URI = os.environ["MONGO_URI"]
-    G_DRIVE_SERVICE_ACCOUNT_JSON = os.environ["G_DRIVE_SERVICE_ACCOUNT_JSON"]
 
     _sudo_raw = os.environ.get("SUDO_USERS", "")
     SUDO_USERS = list(set(int(x) for x in _sudo_raw.split() if x))
@@ -28,8 +27,8 @@ try:
     DOWNLOAD_DIRECTORY = os.environ.get("DOWNLOAD_DIRECTORY", "./downloads/")
     FAILED_DIRECTORY = os.environ.get("FAILED_DIRECTORY", "./failed/")
 
-    G_DRIVE_CLIENT_ID = os.environ.get("G_DRIVE_CLIENT_ID")
-    G_DRIVE_CLIENT_SECRET = os.environ.get("G_DRIVE_CLIENT_SECRET")
+    G_DRIVE_CLIENT_ID = os.environ["G_DRIVE_CLIENT_ID"]
+    G_DRIVE_CLIENT_SECRET = os.environ["G_DRIVE_CLIENT_SECRET"]
     REDIRECT_URI = os.environ.get("REDIRECT_URI", "")
     WEB_PASSWORD = os.environ.get("WEB_PASSWORD", "")
 

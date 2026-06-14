@@ -1,0 +1,14 @@
+venv/
+.env
+.git
+.gitignore
+__pycache__/
+*.pyc
+downloads/
+failed/
+log.txt
+*.session
+*.session-journal
+Dockerfile
+.dockerignore
+render.yaml

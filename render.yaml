@@ -1,9 +1,7 @@
 services:
   - type: web
     name: gdrive-sync-bot
-    runtime: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: python3 -m bot
+    runtime: docker
     envVars:
       - key: BOT_TOKEN
         sync: false
@@ -14,8 +12,6 @@ services:
       - key: MONGO_URI
         sync: false
       - key: SUDO_USERS
-        sync: false
-      - key: G_DRIVE_SERVICE_ACCOUNT_JSON
         sync: false
       - key: G_DRIVE_CLIENT_ID
         sync: false

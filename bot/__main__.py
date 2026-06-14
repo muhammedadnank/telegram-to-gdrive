@@ -9,7 +9,6 @@ from pyrogram import enums
 
 from bot import (
     BOT_TOKEN, APP_ID, API_HASH,
-    G_DRIVE_SERVICE_ACCOUNT_JSON,
     DOWNLOAD_DIRECTORY, FAILED_DIRECTORY,
     LOGGER,
 )
@@ -20,17 +19,7 @@ from bot.helpers.db import uploads as uploads_db
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
 
 
-def _write_credentials():
-    """Write service account JSON from env var to credentials.json at startup."""
-    path = "credentials.json"
-    try:
-        creds = json.loads(G_DRIVE_SERVICE_ACCOUNT_JSON)
-        with open(path, "w") as f:
-            json.dump(creds, f)
-        LOGGER.info("credentials.json written from environment variable.")
-    except Exception as e:
-        LOGGER.error(f"Failed to write credentials.json: {e}")
-        exit(1)
+
 
 
 def _ensure_dirs():
@@ -60,7 +49,6 @@ def _ensure_dirs():
 
 
 async def _run():
-    _write_credentials()
     _ensure_dirs()
     start_server()
 

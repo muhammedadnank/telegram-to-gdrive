@@ -3,12 +3,19 @@ from bot.helpers.db import DB
 _col = DB["folder_mappings"]
 
 
-def add(folder_id: str, channel_id: str) -> bool:
-    """Add or re-enable a folder→channel mapping."""
+def add(folder_id: str, channel_id: str, added_by: int = None) -> bool:
+    """Add or re-enable a folder➔channel mapping."""
     try:
+        update_data = {
+            "folder_id": folder_id,
+            "channel_id": channel_id,
+            "enabled": True,
+        }
+        if added_by is not None:
+            update_data["added_by"] = added_by
         _col.update_one(
             {"folder_id": folder_id},
-            {"$set": {"folder_id": folder_id, "channel_id": channel_id, "enabled": True}},
+            {"$set": update_data},
             upsert=True,
         )
         return True
@@ -27,6 +34,15 @@ def remove(folder_id: str) -> bool:
         return False
 
 
+def get(folder_id: str) -> dict:
+    """Return the folder mapping document."""
+    try:
+        return _col.find_one({"folder_id": folder_id}, {"_id": 0})
+    except Exception as e:
+        print(f"mappings.get error: {e}")
+        return None
+
+
 def get_all_enabled() -> list:
     """Return all enabled folder→channel mappings."""
     try:
@@ -42,3 +58,4 @@ def get_all() -> list:
     except Exception as e:
         print(f"mappings.get_all error: {e}")
         return []
+

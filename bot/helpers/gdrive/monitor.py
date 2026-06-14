@@ -5,7 +5,6 @@ from pathlib import Path
 
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
-from google.oauth2 import service_account
 from googleapiclient.errors import HttpError
 from pyrogram.errors import FloodWait
 
@@ -20,24 +19,16 @@ from bot import (
 from bot.helpers.db import mappings as mappings_db
 from bot.helpers.db import tokens as tokens_db
 from bot.helpers.db import uploads as uploads_db
+from bot.helpers.db import gDriveDB
 
 AUDIO_EXTS = {".mp3", ".m4a", ".flac", ".wav", ".aac", ".ogg", ".opus"}
-CREDENTIALS_FILE = "credentials.json"
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
-
-
-def _build_service():
-    creds = service_account.Credentials.from_service_account_file(
-        CREDENTIALS_FILE, scopes=SCOPES
-    )
-    return build("drive", "v3", credentials=creds, cache_discovery=False)
 
 
 class DriveMonitor:
     def __init__(self, pyrogram_client):
         self._client = pyrogram_client
         self._queue: asyncio.Queue = asyncio.Queue()
-        self._service = _build_service()
         self._running = False
         self._workers: list[asyncio.Task] = []
         self._loop = asyncio.get_event_loop()
@@ -69,6 +60,8 @@ class DriveMonitor:
         count = 0
         for item in items:
             uploads_db.reset_for_retry(item["file_id"])
+            mapping = mappings_db.get(item["folder_id"])
+            added_by = mapping.get("added_by") if mapping else None
             await self._queue.put(
                 {
                     "file_id": item["file_id"],
@@ -76,6 +69,7 @@ class DriveMonitor:
                     "folder_id": item["folder_id"],
                     "channel_id": item["channel_id"],
                     "from_failed": True,
+                    "added_by": added_by,
                 }
             )
             count += 1
@@ -92,6 +86,25 @@ class DriveMonitor:
                 LOGGER.error(f"Poll loop error: {e}")
             await asyncio.sleep(POLL_INTERVAL)
 
+    def get_service_for_user(self, user_id=None):
+        """Build and return a Google Drive service using user OAuth2 credentials."""
+        if not user_id:
+            return None
+        creds = gDriveDB.search(user_id)
+        if creds:
+            try:
+                from httplib2 import Http
+                creds.refresh(Http())
+                gDriveDB._set(user_id, creds)
+                return build("drive", "v3", credentials=creds, cache_discovery=False)
+            except Exception as e:
+                LOGGER.warning(f"Failed to refresh OAuth credentials for user {user_id}: {e}")
+        else:
+            LOGGER.warning(f"No OAuth credentials found in DB for user {user_id}")
+        return None
+
+
+
     async def _check_all_folders(self):
         folder_maps = mappings_db.get_all_enabled()
         if not folder_maps:
@@ -102,12 +115,18 @@ class DriveMonitor:
     def _poll_folder(self, mapping: dict):
         folder_id = mapping["folder_id"]
         channel_id = mapping["channel_id"]
+        added_by = mapping.get("added_by")
+
+        service = self.get_service_for_user(added_by)
+        if not service:
+            LOGGER.error(f"Cannot poll folder {folder_id}: No valid credentials available (user: {added_by})")
+            return
 
         token = tokens_db.get(folder_id)
         if not token:
             # First run: get start token so we don't re-upload old files
             try:
-                resp = self._service.changes().getStartPageToken().execute()
+                resp = service.changes().getStartPageToken().execute()
                 token = resp.get("startPageToken")
                 tokens_db.set(folder_id, token)
                 LOGGER.info(f"Initialized page token for folder {folder_id}")
@@ -119,7 +138,7 @@ class DriveMonitor:
         while current_token:
             try:
                 resp = (
-                    self._service.changes()
+                    service.changes()
                     .list(
                         pageToken=current_token,
                         spaces="drive",
@@ -165,6 +184,7 @@ class DriveMonitor:
                         "folder_id": folder_id,
                         "channel_id": channel_id,
                         "from_failed": False,
+                        "added_by": added_by,
                     },
                 )
                 LOGGER.info(f"Queued: {name} ({file_id}) → {channel_id}")
@@ -202,9 +222,17 @@ class DriveMonitor:
         folder_id = task["folder_id"]
         channel_id = task["channel_id"]
         from_failed = task.get("from_failed", False)
+        added_by = task.get("added_by")
 
         local_path = os.path.join(DOWNLOAD_DIRECTORY, "drive", file_name)
         failed_path = os.path.join(FAILED_DIRECTORY, file_name)
+
+        # Get service for this task
+        service = self.get_service_for_user(added_by)
+        if not service:
+            LOGGER.error(f"Cannot process task for file {file_name}: No valid credentials available (user: {added_by})")
+            await self._handle_failure(file_id, file_name, local_path, failed_path, channel_id)
+            return
 
         # ── Download ──────────────────────────────────────────────────────
         uploads_db.set_status(file_id, "downloading")
@@ -214,7 +242,7 @@ class DriveMonitor:
                 os.makedirs(os.path.dirname(local_path), exist_ok=True)
                 os.replace(failed_path, local_path)
             else:
-                await self._loop.run_in_executor(None, self._download_file, file_id, local_path)
+                await self._loop.run_in_executor(None, self._download_file, service, file_id, local_path)
         except Exception as e:
             LOGGER.error(f"Download failed [{file_name}]: {e}")
             await self._handle_failure(file_id, file_name, local_path, failed_path, channel_id)
@@ -223,7 +251,7 @@ class DriveMonitor:
         # ── Upload to Telegram ────────────────────────────────────────────
         uploads_db.set_status(file_id, "uploading")
         try:
-            folder_name = await self._get_folder_name(folder_id)
+            folder_name = await self._get_folder_name(service, folder_id)
             caption = (
                 f"**{file_name}**\n\n"
                 f"📁 Source: {folder_name}\n"
@@ -262,8 +290,8 @@ class DriveMonitor:
         if from_failed and os.path.exists(failed_path):
             os.remove(failed_path)
 
-    def _download_file(self, file_id: str, dest_path: str):
-        request = self._service.files().get_media(fileId=file_id, supportsAllDrives=True)
+    def _download_file(self, service, file_id: str, dest_path: str):
+        request = service.files().get_media(fileId=file_id, supportsAllDrives=True)
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
         with open(dest_path, "wb") as fh:
             downloader = MediaIoBaseDownload(fh, request, chunksize=8 * 1024 * 1024)
@@ -271,11 +299,11 @@ class DriveMonitor:
             while not done:
                 _, done = downloader.next_chunk()
 
-    async def _get_folder_name(self, folder_id: str) -> str:
+    async def _get_folder_name(self, service, folder_id: str) -> str:
         try:
             meta = await self._loop.run_in_executor(
                 None,
-                lambda: self._service.files()
+                lambda: service.files()
                 .get(fileId=folder_id, fields="name", supportsAllDrives=True)
                 .execute(),
             )
