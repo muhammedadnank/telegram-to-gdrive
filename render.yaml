@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: music-to-gdrive-bot
+    name: gdrive-sync-bot
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: python3 -m bot
@@ -15,15 +15,21 @@ services:
         sync: false
       - key: SUDO_USERS
         sync: false
+      - key: G_DRIVE_SERVICE_ACCOUNT_JSON
+        sync: false
       - key: G_DRIVE_CLIENT_ID
         sync: false
       - key: G_DRIVE_CLIENT_SECRET
         sync: false
-      - key: DOWNLOAD_DIRECTORY
-        value: ./downloads/
-      - key: PORT
-        value: "8080"
       - key: REDIRECT_URI
         sync: false
-      - key: RENDER_EXTERNAL_URL
-        sync: false
+      - key: MAX_WORKERS
+        value: "3"
+      - key: POLL_INTERVAL
+        value: "45"
+      - key: DOWNLOAD_DIRECTORY
+        value: "./downloads/"
+      - key: FAILED_DIRECTORY
+        value: "./failed/"
+      - key: PORT
+        value: "8080"

@@ -21,6 +21,15 @@ flows = {}
 )
 async def _auth(client, message):
     user_id = message.from_user.id
+    if not G_DRIVE_CLIENT_ID or not G_DRIVE_CLIENT_SECRET:
+        await message.reply_text(
+            "❗ **Google Drive OAuth credentials are not configured.**\n"
+            "__The administrator has not set `G_DRIVE_CLIENT_ID` and `G_DRIVE_CLIENT_SECRET` in the environment variables.__\n"
+            "__This is required for personal Google Drive authorization/upload. Please contact the administrator.__",
+            quote=True
+        )
+        return
+
     creds = gDriveDB.search(user_id)
     if creds is not None:
         try:

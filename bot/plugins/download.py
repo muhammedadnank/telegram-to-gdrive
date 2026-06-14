@@ -8,6 +8,11 @@ from bot import DOWNLOAD_DIRECTORY, LOGGER
 from bot.config import Messages
 
 
+TG_DOWNLOAD_DIR = os.path.join(DOWNLOAD_DIRECTORY, "tg")
+if not TG_DOWNLOAD_DIR.endswith(os.sep):
+    TG_DOWNLOAD_DIR += os.sep
+
+
 @Client.on_message(
     filters.private
     & filters.incoming
@@ -40,7 +45,7 @@ async def _telegram_file(client, message):
     LOGGER.info(f"Download:{user_id}: {file.file_name}")
 
     try:
-        file_path = await message.download(file_name=DOWNLOAD_DIRECTORY)
+        file_path = await message.download(file_name=TG_DOWNLOAD_DIR)
         await sent_message.edit(
             Messages.DOWNLOADED_SUCCESSFULLY.format(
                 os.path.basename(file_path), humanbytes(os.path.getsize(file_path))
@@ -58,7 +63,7 @@ async def _telegram_file(client, message):
         await asyncio.sleep(wait_seconds)
         # Retry after wait
         try:
-            file_path = await message.download(file_name=DOWNLOAD_DIRECTORY)
+            file_path = await message.download(file_name=TG_DOWNLOAD_DIR)
             await sent_message.edit(
                 Messages.DOWNLOADED_SUCCESSFULLY.format(
                     os.path.basename(file_path), humanbytes(os.path.getsize(file_path))

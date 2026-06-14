@@ -18,6 +18,10 @@ build/
 
 # Downloads
 downloads/
+failed/
+
+# Credentials
+credentials.json
 
 # Logs
 log.txt

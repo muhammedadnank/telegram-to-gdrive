@@ -1,48 +1,74 @@
 import os
+import json
 import signal
+import asyncio
 import logging
+
 from pyrogram import Client
 from pyrogram import enums
-from bot import APP_ID, API_HASH, BOT_TOKEN, DOWNLOAD_DIRECTORY
-from bot.server import start_server
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+from bot import (
+    BOT_TOKEN, APP_ID, API_HASH,
+    G_DRIVE_SERVICE_ACCOUNT_JSON,
+    DOWNLOAD_DIRECTORY, FAILED_DIRECTORY,
+    LOGGER,
 )
-LOGGER = logging.getLogger(__name__)
+from bot.server import start_server
+from bot.helpers.gdrive import DriveMonitor
+from bot.helpers.db import uploads as uploads_db
+
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
 
 
-def handle_sigterm(signum, frame):
-    LOGGER.info("SIGTERM received — bot will stop gracefully after current upload completes.")
+def _write_credentials():
+    """Write service account JSON from env var to credentials.json at startup."""
+    path = "credentials.json"
+    try:
+        creds = json.loads(G_DRIVE_SERVICE_ACCOUNT_JSON)
+        with open(path, "w") as f:
+            json.dump(creds, f)
+        LOGGER.info("credentials.json written from environment variable.")
+    except Exception as e:
+        LOGGER.error(f"Failed to write credentials.json: {e}")
+        exit(1)
 
 
-if __name__ == "__main__":
-    # Handle Render's SIGTERM gracefully
-    signal.signal(signal.SIGTERM, handle_sigterm)
-
-    # Use absolute path for downloads to avoid path confusion
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    download_dir = os.path.join(base_dir, "downloads")
-
+def _ensure_dirs():
     import shutil
-    if os.path.isdir(download_dir):
+    project_root = os.path.abspath(".")
+    download_abs = os.path.abspath(DOWNLOAD_DIRECTORY)
+    failed_abs = os.path.abspath(FAILED_DIRECTORY)
+
+    # Safety: never wipe root, project dir, or the failed/ dir itself
+    safe_to_wipe = (
+        os.path.isdir(download_abs)
+        and download_abs != project_root
+        and download_abs != failed_abs
+        and not failed_abs.startswith(download_abs + os.sep)
+    )
+    if safe_to_wipe:
         try:
-            shutil.rmtree(download_dir)
+            shutil.rmtree(download_abs)
+            LOGGER.info(f"Cleared download directory: {download_abs}")
         except Exception as e:
             LOGGER.warning(f"Failed to clear download directory: {e}")
-    os.makedirs(download_dir)
 
-    LOGGER.info(f"Download directory: {download_dir}")
+    for d in [DOWNLOAD_DIRECTORY, FAILED_DIRECTORY,
+              os.path.join(DOWNLOAD_DIRECTORY, "drive"),
+              os.path.join(DOWNLOAD_DIRECTORY, "tg")]:
+        os.makedirs(d, exist_ok=True)
 
-    # Start Flask keep-alive server
+
+async def _run():
+    _write_credentials()
+    _ensure_dirs()
     start_server()
 
     plugins = dict(root="bot/plugins")
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     app = Client(
-        "G-DriveBot",
+        "GDriveSyncBot",
         bot_token=BOT_TOKEN,
         api_id=APP_ID,
         api_hash=API_HASH,
@@ -51,6 +77,39 @@ if __name__ == "__main__":
         workdir=base_dir,
     )
 
-    LOGGER.info("Starting Bot!")
-    app.run()
-    LOGGER.info("Bot Stopped!")
+    monitor = DriveMonitor(pyrogram_client=app)
+    app._drive_monitor = monitor  # expose to plugins via client ref
+
+    import bot.server
+    bot.server.monitor = monitor
+    bot.server.loop = asyncio.get_running_loop()
+
+    async with app:
+        LOGGER.info("Bot started.")
+
+        # Reset any stale/stuck uploads from previous sessions
+        uploads_db.reset_stale_uploads()
+
+        # Startup: auto-retry any previously failed uploads
+        retry_count = await monitor.enqueue_retryable()
+        if retry_count:
+            LOGGER.info(f"Startup auto-retry: {retry_count} item(s) re-queued.")
+
+        await monitor.start()
+
+        stop_event = asyncio.Event()
+
+        def _handle_sigterm(*_):
+            LOGGER.info("SIGTERM received — shutting down gracefully.")
+            stop_event.set()
+
+        signal.signal(signal.SIGTERM, _handle_sigterm)
+        signal.signal(signal.SIGINT, _handle_sigterm)
+
+        await stop_event.wait()
+        await monitor.stop()
+        LOGGER.info("Bot stopped.")
+
+
+if __name__ == "__main__":
+    asyncio.run(_run())

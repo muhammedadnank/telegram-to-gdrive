@@ -5,9 +5,9 @@ pymongo
 dnspython
 httplib2
 google-api-python-client
+google-auth
 google-auth-httplib2
-google-auth-oauthlib
-tenacity
 python-dotenv
 flask
 gunicorn
+tenacity

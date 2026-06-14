@@ -1,9 +1,10 @@
 from pymongo import MongoClient
 from bot import MONGO_URI, LOGGER
 
-def start():
+
+def _connect():
     if not MONGO_URI:
-        LOGGER.error("MONGO_URI is missing. Exiting now.")
+        LOGGER.error("MONGO_URI is missing.")
         exit(1)
     try:
         client = MongoClient(MONGO_URI)
@@ -14,4 +15,5 @@ def start():
         LOGGER.error(f"Failed to connect to MongoDB: {e}")
         exit(1)
 
-DB = start()
+
+DB = _connect()
